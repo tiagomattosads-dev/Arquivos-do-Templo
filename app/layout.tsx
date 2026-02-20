@@ -13,7 +13,7 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: 'Lumina Reader - Seu Leitor Digital Premium',
+  title: 'arquivos do templo - Seu Leitor Digital Premium',
   description: 'Leitor de EPUB e PDF com interface moderna e minimalista.',
 }
 
