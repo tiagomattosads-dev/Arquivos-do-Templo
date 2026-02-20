@@ -128,46 +128,46 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
       {/* Header */}
-      <header className="h-20 border-b border-zinc-800/50 flex items-center justify-between px-8 bg-zinc-950/80 backdrop-blur-md z-50">
-        <div className="flex items-center gap-6">
+      <header className="h-20 border-b border-zinc-800/50 flex items-center justify-between px-4 md:px-8 bg-zinc-950/80 backdrop-blur-md z-50">
+        <div className="flex items-center gap-3 md:gap-6">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-xl hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all border border-transparent hover:border-zinc-800"
+            className="hidden md:flex p-2 rounded-xl hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all border border-transparent hover:border-zinc-800"
           >
             <Menu size={24} />
           </button>
           
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-              <Book className="text-white w-7 h-7" />
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20">
+              <Book className="text-white w-6 h-6 md:w-7 md:h-7" />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+              <h1 className="text-lg md:text-2xl font-display font-bold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
                 arquivos do templo
               </h1>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Reader Premium</p>
+              <p className="hidden md:block text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Reader Premium</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6">
           {!file && (
             <label 
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
-              className={`relative cursor-pointer group flex items-center gap-3 px-6 py-3 rounded-2xl border-2 border-dashed transition-all ${
+              className={`relative cursor-pointer group flex items-center gap-2 md:gap-3 px-3 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-2 border-dashed transition-all ${
                 isDragging 
                   ? 'border-blue-500 bg-blue-500/10 scale-105' 
                   : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'
               }`}
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                <Plus size={20} />
+              <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <Plus size={18} />
               </div>
-              <div className="text-left">
-                <p className="text-sm font-bold text-white leading-none">Adicionar Livro</p>
-                <p className="text-[10px] text-zinc-500 mt-1">EPUB ou PDF</p>
+              <div className="text-left hidden sm:block">
+                <p className="text-xs md:text-sm font-bold text-white leading-none">Adicionar</p>
+                <p className="text-[8px] md:text-[10px] text-zinc-500 mt-0.5 md:mt-1">EPUB/PDF</p>
               </div>
               <input 
                 type="file" 
@@ -198,11 +198,11 @@ export default function Home() {
 
       {/* Content Area */}
       <div className="flex-1 relative flex overflow-hidden">
-        {/* Sidebar */}
+        {/* Sidebar (Desktop) */}
         <motion.aside
           initial={false}
           animate={{ width: isSidebarOpen ? 280 : 0, opacity: isSidebarOpen ? 1 : 0 }}
-          className="border-r border-zinc-800/50 bg-zinc-950/50 backdrop-blur-sm overflow-hidden flex flex-col"
+          className="hidden md:flex border-r border-zinc-800/50 bg-zinc-950/50 backdrop-blur-sm overflow-hidden flex-col"
         >
           <div className="p-6 space-y-8">
             {/* Search */}
@@ -392,8 +392,37 @@ export default function Home() {
         </AnimatePresence>
       </div>
 
-      {/* Footer / Status Bar */}
-      <footer className="h-10 border-t border-zinc-800/50 bg-zinc-950 px-8 flex items-center justify-between text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
+      {/* Bottom Navigation (Mobile) */}
+      {!file && (
+        <nav className="md:hidden h-20 border-t border-zinc-800/50 bg-zinc-950/80 backdrop-blur-lg flex items-center justify-around px-4 pb-2 z-50">
+          {[
+            { id: 'home', label: 'Início', icon: HomeIcon },
+            { id: 'library', label: 'Biblioteca', icon: Library },
+            { id: 'favorites', label: 'Favoritos', icon: Heart },
+            { id: 'history', label: 'Histórico', icon: History },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-1.5 transition-all ${
+                activeTab === item.id ? 'text-blue-500' : 'text-zinc-500'
+              }`}
+            >
+              <div className={`p-2 rounded-xl transition-all ${
+                activeTab === item.id ? 'bg-blue-500/10' : ''
+              }`}>
+                <item.icon size={24} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-tighter">
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+      )}
+
+      {/* Footer / Status Bar (Desktop Only) */}
+      <footer className="hidden md:flex h-10 border-t border-zinc-800/50 bg-zinc-950 px-8 items-center justify-between text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
         <div className="flex gap-6">
           <span>arquivos do templo v1.1</span>
           <span className="text-zinc-800">|</span>
