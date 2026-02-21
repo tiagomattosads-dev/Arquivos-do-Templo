@@ -89,39 +89,63 @@ export default function LibraryView({ onOpenBook }: LibraryViewProps) {
 
     setIsUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      // 1. Verify session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        alert('Usuário não autenticado no banco de dados');
+        throw new Error('Usuário não autenticado no banco de dados');
+      }
 
-      // 1. Upload to Storage
+      const user = session.user;
+
+      // 2. Upload to Storage
+      // Using a unique name to avoid conflicts while following the requested structure
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const uniqueFileName = `${Date.now()}_${file.name}`;
+      const filePath = `${user.id}/${uniqueFileName}`;
 
-      const { error: uploadError } = await supabase.storage.from('arquivos_templo').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from('arquivos_templo')
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Full Storage Error:', uploadError);
+        alert('Erro do Supabase: ' + uploadError.message);
+        throw uploadError;
+      }
 
-      // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage.from('arquivos_templo').getPublicUrl(filePath);
+      // 3. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('arquivos_templo')
+        .getPublicUrl(filePath);
 
-      // 3. Save to Database
+      if (!publicUrl) {
+        throw new Error('Não foi possível gerar a URL pública do arquivo.');
+      }
+
+      // 4. Mandatory: Insert into 'books' table
       const { error: dbError } = await supabase
         .from('books')
         .insert({
+          user_id: user.id,
           title: file.name,
           file_url: publicUrl,
           file_type: extension as 'epub' | 'pdf',
-          user_id: user.id,
-          cover: `https://picsum.photos/seed/${file.name}/300/450`
+          cover: `https://picsum.photos/seed/${file.name}/300/450`,
+          progress: 0
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database Insert Error:', dbError);
+        throw new Error(`Erro ao salvar metadados: ${dbError.message}`);
+      }
 
-      showToast(`"${file.name}" adicionado à biblioteca.`, 'success');
-      fetchBooks();
+      // 5. Success and Refetch
+      showToast(`"${file.name}" adicionado à biblioteca com sucesso!`, 'success');
+      await fetchBooks();
     } catch (error: any) {
-      console.error('Upload error:', error);
-      showToast(error.message || 'Erro ao fazer upload do arquivo.', 'error');
+      console.error('Critical Upload Failure:', error);
+      showToast(error.message || 'Ocorreu um erro inesperado no upload.', 'error');
     } finally {
       setIsUploading(false);
       if (e.target) e.target.value = '';

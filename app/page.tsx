@@ -123,19 +123,32 @@ export default function Home() {
       type = 'pdf';
     }
 
-    if (type && user) {
+    if (type) {
       showToast('Enviando arquivo...', 'info');
       try {
-        // 1. Upload to Storage
+        // 1. Verify session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          alert('Usuário não autenticado no banco de dados');
+          throw new Error('Usuário não autenticado no banco de dados');
+        }
+
+        const user = session.user;
+
+        // 2. Upload to Storage
         const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        const uniqueFileName = `${Date.now()}_${selectedFile.name}`;
+        const filePath = `${user.id}/${uniqueFileName}`;
 
         const { error: uploadError } = await supabase.storage.from('arquivos_templo').upload(filePath, selectedFile);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Full Storage Error:', uploadError);
+          alert('Erro do Supabase: ' + uploadError.message);
+          throw uploadError;
+        }
 
-        // 2. Get Public URL
+        // 3. Get Public URL
         const { data: { publicUrl } } = supabase.storage.from('arquivos_templo').getPublicUrl(filePath);
 
         // 3. Save to Database
