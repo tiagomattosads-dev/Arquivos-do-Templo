@@ -14,9 +14,6 @@ import {
   Edit2,
   X
 } from 'lucide-react';
-import { storeBook } from '@/lib/storage';
-import { extractPdfCover } from '@/lib/pdfUtils';
-import { useToast } from '@/components/ToastProvider';
 
 interface BookItem {
   id: string;
@@ -38,7 +35,6 @@ export default function LibraryView() {
   const [isAddingSession, setIsAddingSession] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const { showToast } = useToast();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -85,13 +81,10 @@ export default function LibraryView() {
     saveLibrary([...sessions, newSession]);
     setNewSessionName('');
     setIsAddingSession(false);
-    showToast(`Sessão "${newSessionName}" criada.`, 'success');
   };
 
   const deleteSession = (id: string) => {
-    const session = sessions.find(s => s.id === id);
     saveLibrary(sessions.filter(s => s.id !== id));
-    showToast(`Sessão "${session?.name}" excluída.`, 'info');
   };
 
   const handleAddFileClick = (sessionId: string) => {
@@ -99,42 +92,22 @@ export default function LibraryView() {
     fileInputRef.current?.click();
   };
 
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeSessionId) {
       const extension = file.name.split('.').pop()?.toLowerCase();
       if (extension !== 'epub' && extension !== 'pdf') {
-        showToast('Por favor, selecione um arquivo EPUB ou PDF.', 'error');
+        alert('Por favor, selecione um arquivo EPUB ou PDF.');
         return;
       }
 
-      const bookId = `${file.name}-${Date.now()}`;
-      
-      // Extract cover if PDF
-      let cover: string | undefined = undefined;
-      if (extension === 'pdf') {
-        cover = await extractPdfCover(file);
-      } else {
-        cover = `https://picsum.photos/seed/${file.name}/300/450`;
-      }
-
-      // Store in IndexedDB
-      await storeBook({
-        id: bookId,
-        name: file.name,
-        type: extension as 'epub' | 'pdf',
-        data: file,
-        cover: cover,
-        addedAt: Date.now()
-      });
-
       const newBook: BookItem = {
-        id: bookId,
+        id: Date.now().toString(),
         name: file.name,
         type: extension as 'epub' | 'pdf',
         addedAt: Date.now(),
         progress: 0,
-        cover: cover
+        cover: `https://picsum.photos/seed/${file.name}/300/450`
       };
 
       const updatedSessions = sessions.map(s => {
@@ -147,7 +120,6 @@ export default function LibraryView() {
       saveLibrary(updatedSessions);
       setActiveSessionId(null);
       if (e.target) e.target.value = '';
-      showToast(`"${file.name}" adicionado à biblioteca.`, 'success');
     }
   };
 

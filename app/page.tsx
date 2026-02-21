@@ -25,9 +25,6 @@ import {
   Search
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { storeBook, getBook } from '@/lib/storage';
-import { extractPdfCover } from '@/lib/pdfUtils';
-import { useToast } from '@/components/ToastProvider';
 
 // Dynamically import readers to avoid SSR issues with browser APIs
 const EpubReader = dynamic(() => import('@/components/EpubReader'), { ssr: false });
@@ -37,7 +34,6 @@ const FavoritesView = dynamic(() => import('@/components/FavoritesView'), { ssr:
 const HistoryView = dynamic(() => import('@/components/HistoryView'), { ssr: false });
 
 interface RecentBook {
-  id: string;
   name: string;
   type: 'epub' | 'pdf';
   lastRead: number;
@@ -53,7 +49,6 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const { showToast } = useToast();
 
   // Toggle dark mode
   useEffect(() => {
@@ -88,7 +83,7 @@ export default function Home() {
     }
   };
 
-  const processFile = async (selectedFile: File) => {
+  const processFile = (selectedFile: File) => {
     const extension = selectedFile.name.split('.').pop()?.toLowerCase();
     let type: 'epub' | 'pdf' | null = null;
 
@@ -99,37 +94,16 @@ export default function Home() {
     }
 
     if (type) {
-      const bookId = `${selectedFile.name}-${Date.now()}`;
-      
-      // Extract cover if PDF
-      let cover: string | undefined = undefined;
-      if (type === 'pdf') {
-        cover = await extractPdfCover(selectedFile);
-      } else {
-        cover = `https://picsum.photos/seed/${selectedFile.name}/300/450`;
-      }
-
-      // Store in IndexedDB
-      await storeBook({
-        id: bookId,
-        name: selectedFile.name,
-        type: type,
-        data: selectedFile,
-        cover: cover,
-        addedAt: Date.now()
-      });
-
       setFile(selectedFile);
       setFileType(type);
       
       // Update recent books
       const newRecent: RecentBook = {
-        id: bookId,
         name: selectedFile.name,
         type: type,
         lastRead: Date.now(),
-        progress: 0,
-        cover: cover
+        progress: Math.floor(Math.random() * 100), // Mock progress for now
+        cover: `https://picsum.photos/seed/${selectedFile.name}/300/450` // Mock cover
       };
 
       const updatedRecent = [
@@ -139,27 +113,8 @@ export default function Home() {
 
       setRecentBooks(updatedRecent);
       localStorage.setItem('arquivos_templo_recent_books', JSON.stringify(updatedRecent));
-      showToast(`"${selectedFile.name}" adicionado com sucesso!`, 'success');
     } else {
-      showToast('Por favor, selecione um arquivo EPUB ou PDF válido.', 'error');
-    }
-  };
-
-  const openStoredBook = async (book: RecentBook) => {
-    try {
-      const stored = await getBook(book.id);
-      if (stored) {
-        // Convert Blob back to File
-        const file = new File([stored.data], stored.name, { type: stored.type === 'pdf' ? 'application/pdf' : 'application/epub+zip' });
-        setFile(file);
-        setFileType(stored.type);
-        showToast(`Abrindo "${stored.name}"...`, 'info');
-      } else {
-        showToast(`Arquivo "${book.name}" não encontrado no armazenamento local.`, 'error');
-      }
-    } catch (error) {
-      console.error('Error opening stored book:', error);
-      showToast('Erro ao abrir o livro armazenado.', 'error');
+      alert('Por favor, selecione um arquivo EPUB ou PDF válido.');
     }
   };
 
@@ -340,7 +295,9 @@ export default function Home() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
                             className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
-                            onClick={() => openStoredBook(book)}
+                            onClick={() => {
+                              alert(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`);
+                            }}
                           >
                             {/* Book Cover */}
                             <img 
