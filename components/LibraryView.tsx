@@ -32,6 +32,9 @@ export default function LibraryView() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isAddingSession, setIsAddingSession] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load library from localStorage
   useEffect(() => {
@@ -79,18 +82,57 @@ export default function LibraryView() {
   };
 
   const deleteSession = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta sessão?')) {
-      saveLibrary(sessions.filter(s => s.id !== id));
+    saveLibrary(sessions.filter(s => s.id !== id));
+  };
+
+  const handleAddFileClick = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    fileInputRef.current?.click();
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && activeSessionId) {
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension !== 'epub' && extension !== 'pdf') {
+        alert('Por favor, selecione um arquivo EPUB ou PDF.');
+        return;
+      }
+
+      const newBook: BookItem = {
+        id: Date.now().toString(),
+        name: file.name,
+        type: extension as 'epub' | 'pdf',
+        addedAt: Date.now()
+      };
+
+      const updatedSessions = sessions.map(s => {
+        if (s.id === activeSessionId) {
+          return { ...s, books: [newBook, ...s.books] };
+        }
+        return s;
+      });
+
+      saveLibrary(updatedSessions);
+      setActiveSessionId(null);
+      if (e.target) e.target.value = '';
     }
   };
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar p-12">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        accept=".epub,.pdf" 
+        onChange={onFileChange} 
+      />
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className="text-4xl font-display font-bold text-white tracking-tight">
+            <h2 className="text-4xl font-display font-bold text-zinc-900 dark:text-white tracking-tight">
               Sua Biblioteca
             </h2>
             <p className="text-zinc-500 text-lg">
@@ -122,7 +164,7 @@ export default function LibraryView() {
                 onChange={(e) => setNewSessionName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addSession()}
                 placeholder="Nome da nova sessão..."
-                className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-blue-500 transition-all"
+                className="flex-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl py-3 px-4 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
               />
               <button 
                 onClick={addSession}
@@ -147,20 +189,23 @@ export default function LibraryView() {
               <div className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
                   <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                  <h3 className="text-2xl font-display font-bold text-white">{session.name}</h3>
-                  <span className="text-xs font-mono text-zinc-600 bg-zinc-900 px-2 py-1 rounded-md">
+                  <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white">{session.name}</h3>
+                  <span className="text-xs font-mono text-zinc-400 dark:text-zinc-600 bg-zinc-100 dark:bg-zinc-900 px-2 py-1 rounded-md">
                     {session.books.length} ARQUIVOS
                   </span>
                 </div>
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <button 
-                    onClick={() => deleteSession(session.id)}
-                    className="p-2 text-zinc-600 hover:text-red-400 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSession(session.id);
+                    }}
+                    className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-red-500 transition-colors"
                     title="Excluir Sessão"
                   >
                     <Trash2 size={18} />
                   </button>
-                  <button className="p-2 text-zinc-600 hover:text-white transition-colors">
+                  <button className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-zinc-900 dark:hover:text-white transition-colors">
                     <MoreVertical size={18} />
                   </button>
                 </div>
@@ -171,7 +216,7 @@ export default function LibraryView() {
                   {session.books.map((book) => (
                     <div 
                       key={book.id}
-                      className="group bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-6 hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer"
+                      className="group bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl p-6 hover:bg-white dark:hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer shadow-sm hover:shadow-md"
                     >
                       <div className="flex flex-col gap-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -179,13 +224,16 @@ export default function LibraryView() {
                         }`}>
                           {book.type === 'epub' ? <Book size={24} /> : <FileText size={24} />}
                         </div>
-                        <h4 className="font-bold text-white truncate">{book.name}</h4>
+                        <h4 className="font-bold text-zinc-900 dark:text-white truncate">{book.name}</h4>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="h-32 rounded-3xl border-2 border-dashed border-zinc-900 flex flex-col items-center justify-center gap-2 text-zinc-700 hover:border-zinc-800 hover:text-zinc-600 transition-all cursor-pointer group">
+                <div 
+                  onClick={() => handleAddFileClick(session.id)}
+                  className="h-32 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-900 flex flex-col items-center justify-center gap-2 text-zinc-400 dark:text-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-800 hover:text-zinc-500 dark:hover:text-zinc-600 transition-all cursor-pointer group"
+                >
                   <Plus size={24} className="group-hover:scale-110 transition-transform" />
                   <p className="text-sm font-medium">Adicionar arquivos a esta sessão</p>
                 </div>

@@ -30,6 +30,8 @@ import dynamic from 'next/dynamic';
 const EpubReader = dynamic(() => import('@/components/EpubReader'), { ssr: false });
 const PdfReader = dynamic(() => import('@/components/PdfReader'), { ssr: false });
 const LibraryView = dynamic(() => import('@/components/LibraryView'), { ssr: false });
+const FavoritesView = dynamic(() => import('@/components/FavoritesView'), { ssr: false });
+const HistoryView = dynamic(() => import('@/components/HistoryView'), { ssr: false });
 
 interface RecentBook {
   name: string;
@@ -44,6 +46,16 @@ export default function Home() {
   const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Toggle dark mode
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Load recent books from localStorage
   useEffect(() => {
@@ -126,9 +138,9 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+    <main className="h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden transition-colors duration-300">
       {/* Header */}
-      <header className="h-20 border-b border-zinc-800/50 flex items-center justify-between px-4 md:px-8 bg-zinc-950/80 backdrop-blur-md z-50">
+      <header className="h-20 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md z-50 shrink-0">
         <div className="flex items-center gap-3 md:gap-6">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -190,6 +202,14 @@ export default function Home() {
 
           <div className="w-px h-8 bg-zinc-800" />
           
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="p-3 rounded-xl hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all border border-transparent hover:border-zinc-800"
+            title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
+          >
+            {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
+          </button>
+
           <button className="p-3 rounded-xl hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all border border-transparent hover:border-zinc-800">
             <Settings size={22} />
           </button>
@@ -198,20 +218,19 @@ export default function Home() {
 
       {/* Content Area */}
       <div className="flex-1 relative flex overflow-hidden">
-        {/* Sidebar (Desktop) */}
         <motion.aside
           initial={false}
           animate={{ width: isSidebarOpen ? 280 : 0, opacity: isSidebarOpen ? 1 : 0 }}
-          className="hidden md:flex border-r border-zinc-800/50 bg-zinc-950/50 backdrop-blur-sm overflow-hidden flex-col"
+          className="hidden md:flex border-r border-zinc-200 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-950/50 backdrop-blur-sm overflow-hidden flex-col"
         >
           <div className="p-6 space-y-8">
             {/* Search */}
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input 
                 type="text" 
                 placeholder="Buscar na biblioteca..."
-                className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all"
+                className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-zinc-900 dark:text-white"
               />
             </div>
 
@@ -229,23 +248,23 @@ export default function Home() {
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
                     activeTab === item.id 
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800'
                   }`}
                 >
-                  <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-zinc-500 group-hover:text-blue-500 transition-colors'} />
+                  <item.icon size={20} className={activeTab === item.id ? 'text-white' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors'} />
                   <span className="text-sm font-bold">{item.label}</span>
                 </button>
               ))}
             </nav>
           </div>
 
-          <div className="mt-auto p-6 border-t border-zinc-800/50">
-            <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-2">Espaço em Nuvem</p>
-              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-2">
+          <div className="mt-auto p-6 border-t border-zinc-200 dark:border-zinc-800/50">
+            <div className="bg-white dark:bg-zinc-900/30 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800/50">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 dark:text-zinc-500 mb-2">Espaço em Nuvem</p>
+              <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden mb-2">
                 <div className="h-full bg-blue-600 w-1/3" />
               </div>
-              <p className="text-[10px] text-zinc-400">1.2 GB de 5 GB usados</p>
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">1.2 GB de 5 GB usados</p>
             </div>
           </div>
         </motion.aside>
@@ -263,7 +282,7 @@ export default function Home() {
                 <div className="max-w-6xl mx-auto space-y-12">
                   {/* Hero / Welcome */}
                   <section className="space-y-2">
-                    <h2 className="text-4xl font-display font-bold text-white tracking-tight">
+                    <h2 className="text-4xl font-display font-bold text-zinc-900 dark:text-white tracking-tight">
                       Bem-vindo de volta
                     </h2>
                     <p className="text-zinc-500 text-lg">
@@ -275,10 +294,10 @@ export default function Home() {
                   <section className="space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
                           <Clock size={18} className="text-blue-500" />
                         </div>
-                        <h3 className="text-xl font-display font-bold text-white">Lidos Recentemente</h3>
+                        <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">Lidos Recentemente</h3>
                       </div>
                     </div>
 
@@ -290,7 +309,7 @@ export default function Home() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
-                            className="group relative bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-6 hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden"
+                            className="group relative bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl p-6 hover:bg-white dark:hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md"
                             onClick={() => {
                               // Since we can't store the File object, we prompt to select it again
                               // but in a real app we'd have a backend or IndexedDB
@@ -311,7 +330,7 @@ export default function Home() {
                               </div>
                               
                               <div className="space-y-1">
-                                <h4 className="font-bold text-white truncate pr-6" title={book.name}>
+                                <h4 className="font-bold text-zinc-900 dark:text-white truncate pr-6" title={book.name}>
                                   {book.name}
                                 </h4>
                                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-zinc-500">
@@ -325,7 +344,7 @@ export default function Home() {
                         ))}
                       </div>
                     ) : (
-                      <div className="h-64 rounded-3xl border-2 border-dashed border-zinc-900 flex flex-col items-center justify-center gap-4 text-zinc-600">
+                      <div className="h-64 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-900 flex flex-col items-center justify-center gap-4 text-zinc-400 dark:text-zinc-600">
                         <Book size={48} className="opacity-20" />
                         <p className="font-medium">Nenhum livro recente ainda.</p>
                       </div>
@@ -334,21 +353,21 @@ export default function Home() {
 
                   {/* Quick Tips / Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/5 border border-blue-500/20 rounded-3xl p-8 space-y-4">
+                    <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/5 border border-blue-500/20 rounded-3xl p-8 space-y-4 shadow-sm">
                       <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg">
                         <Maximize2 size={24} />
                       </div>
-                      <h3 className="text-xl font-display font-bold text-white">Foco Total</h3>
-                      <p className="text-zinc-400 text-sm leading-relaxed">
+                      <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">Foco Total</h3>
+                      <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
                         Nossa interface foi desenhada para desaparecer enquanto você lê, garantindo imersão completa no seu livro favorito.
                       </p>
                     </div>
-                    <div className="bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-8 space-y-4">
-                      <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-400">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl p-8 space-y-4 shadow-sm">
+                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
                         <Type size={24} />
                       </div>
-                      <h3 className="text-xl font-display font-bold text-white">Personalização</h3>
-                      <p className="text-zinc-400 text-sm leading-relaxed">
+                      <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">Personalização</h3>
+                      <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
                         Ajuste fontes, tamanhos e temas para tornar sua leitura o mais confortável possível para seus olhos.
                       </p>
                     </div>
@@ -364,6 +383,26 @@ export default function Home() {
                 className="flex-1 flex overflow-hidden"
               >
                 <LibraryView />
+              </motion.div>
+            ) : activeTab === 'favorites' ? (
+              <motion.div 
+                key="favorites"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="flex-1 flex overflow-hidden"
+              >
+                <FavoritesView />
+              </motion.div>
+            ) : activeTab === 'history' ? (
+              <motion.div 
+                key="history"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="flex-1 flex overflow-hidden"
+              >
+                <HistoryView />
               </motion.div>
             ) : (
               <motion.div 
@@ -394,7 +433,7 @@ export default function Home() {
 
       {/* Bottom Navigation (Mobile) */}
       {!file && (
-        <nav className="md:hidden h-20 border-t border-zinc-800/50 bg-zinc-950/80 backdrop-blur-lg flex items-center justify-around px-4 pb-2 z-50">
+        <nav className="md:hidden h-20 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl flex items-center justify-around px-4 pb-safe z-50 shrink-0">
           {[
             { id: 'home', label: 'Início', icon: HomeIcon },
             { id: 'library', label: 'Biblioteca', icon: Library },
@@ -405,7 +444,7 @@ export default function Home() {
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`flex flex-col items-center gap-1.5 transition-all ${
-                activeTab === item.id ? 'text-blue-500' : 'text-zinc-500'
+                activeTab === item.id ? 'text-blue-500' : 'text-zinc-400 dark:text-zinc-500'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all ${
@@ -422,7 +461,7 @@ export default function Home() {
       )}
 
       {/* Footer / Status Bar (Desktop Only) */}
-      <footer className="hidden md:flex h-10 border-t border-zinc-800/50 bg-zinc-950 px-8 items-center justify-between text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
+      <footer className="hidden md:flex h-10 border-t border-zinc-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950 px-8 items-center justify-between text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold shrink-0">
         <div className="flex gap-6">
           <span>arquivos do templo v1.1</span>
           <span className="text-zinc-800">|</span>

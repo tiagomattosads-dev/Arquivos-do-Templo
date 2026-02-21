@@ -11,12 +11,14 @@ import {
   ZoomOut, 
   Maximize2,
   Search,
-  Layout
+  Layout,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
-// Set worker URL for pdfjs - using a more reliable CDN link for the worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Set worker URL for pdfjs - using a more reliable unpkg link
+const pdfjsVersion = pdfjs.version || '5.4.624';
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 
 interface PdfReaderProps {
   file: File;
@@ -27,10 +29,29 @@ export default function PdfReader({ file }: PdfReaderProps) {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    const timer = setTimeout(() => {
+      setFileUrl(url);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+    };
+  }, [file]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
     setIsLoaded(true);
+    setError(null);
+  }
+
+  function onDocumentLoadError(err: Error) {
+    console.error('PDF Load Error:', err);
+    setError('Erro ao carregar o PDF. O arquivo pode estar corrompido ou o formato não é suportado.');
   }
 
   const changePage = (offset: number) => {
@@ -92,27 +113,37 @@ export default function PdfReader({ file }: PdfReaderProps) {
 
       {/* Main Viewer */}
       <div className="flex-1 overflow-auto p-4 md:p-8 lg:p-12 flex justify-center scroll-smooth custom-scrollbar">
-        <div className="relative shadow-2xl shadow-black/50 rounded-lg overflow-hidden bg-white">
-          <Document
-            file={file}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading={
-              <div className="w-[600px] h-[800px] flex items-center justify-center bg-zinc-900">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
-                  <p className="text-zinc-500 text-sm font-medium">Renderizando PDF...</p>
-                </div>
+        <div className="relative shadow-2xl shadow-black/50 rounded-lg overflow-hidden bg-white min-h-[200px] flex items-center justify-center">
+          {error ? (
+            <div className="p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto">
+                <X size={32} />
               </div>
-            }
-          >
-            <Page 
-              pageNumber={pageNumber} 
-              scale={scale}
-              renderAnnotationLayer={false}
-              renderTextLayer={true}
-              className="max-w-full"
-            />
-          </Document>
+              <p className="text-zinc-900 font-medium max-w-xs">{error}</p>
+            </div>
+          ) : fileUrl ? (
+            <Document
+              file={fileUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="w-[600px] h-[800px] flex items-center justify-center bg-zinc-900">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+                    <p className="text-zinc-500 text-sm font-medium">Renderizando PDF...</p>
+                  </div>
+                </div>
+              }
+            >
+              <Page 
+                pageNumber={pageNumber} 
+                scale={scale}
+                renderAnnotationLayer={false}
+                renderTextLayer={true}
+                className="max-w-full"
+              />
+            </Document>
+          ) : null}
         </div>
       </div>
 
