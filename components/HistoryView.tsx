@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { History, Book, FileText, ChevronRight, Clock, Trash2 } from 'lucide-react';
+import { History, Book, FileText, ChevronRight, Clock, Trash2, AlertCircle } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
 
 interface HistoryItem {
   id: string;
@@ -12,8 +13,13 @@ interface HistoryItem {
   progress: number;
 }
 
-export default function HistoryView() {
+interface HistoryViewProps {
+  onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
+}
+
+export default function HistoryView({ onNotify }: HistoryViewProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('arquivos_templo_recent_books');
@@ -31,10 +37,10 @@ export default function HistoryView() {
   }, []);
 
   const clearHistory = () => {
-    if (confirm('Tem certeza que deseja limpar todo o histórico?')) {
-      setHistory([]);
-      localStorage.removeItem('arquivos_templo_recent_books');
-    }
+    setHistory([]);
+    localStorage.removeItem('arquivos_templo_recent_books');
+    onNotify?.('Histórico limpo com sucesso.', 'success');
+    setShowConfirmClear(false);
   };
 
   return (
@@ -52,7 +58,7 @@ export default function HistoryView() {
           </div>
           {history.length > 0 && (
             <button 
-              onClick={clearHistory}
+              onClick={() => setShowConfirmClear(true)}
               className="flex items-center gap-2 px-4 py-2 text-zinc-500 hover:text-red-400 transition-colors text-sm font-bold"
             >
               <Trash2 size={18} />
@@ -60,6 +66,42 @@ export default function HistoryView() {
             </button>
           )}
         </div>
+
+        {/* Custom Confirmation Dialog */}
+        <AnimatePresence>
+          {showConfirmClear && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-red-500/5 border border-red-500/20 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500">
+                  <AlertCircle size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-zinc-900 dark:text-white">Limpar Histórico?</h4>
+                  <p className="text-sm text-zinc-500">Esta ação não pode ser desfeita.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button 
+                  onClick={() => setShowConfirmClear(false)}
+                  className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={clearHistory}
+                  className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-500 transition-all shadow-lg shadow-red-900/20"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {history.length > 0 ? (
           <div className="space-y-4">

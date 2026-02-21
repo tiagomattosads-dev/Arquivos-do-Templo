@@ -30,7 +30,11 @@ interface Session {
   books: BookItem[];
 }
 
-export default function LibraryView() {
+interface LibraryViewProps {
+  onNotify?: (message: string, type: 'success' | 'error' | 'info') => void;
+}
+
+export default function LibraryView({ onNotify }: LibraryViewProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isAddingSession, setIsAddingSession] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
@@ -97,7 +101,7 @@ export default function LibraryView() {
     if (file && activeSessionId) {
       const extension = file.name.split('.').pop()?.toLowerCase();
       if (extension !== 'epub' && extension !== 'pdf') {
-        alert('Por favor, selecione um arquivo EPUB ou PDF.');
+        onNotify?.('Por favor, selecione um arquivo EPUB ou PDF.', 'error');
         return;
       }
 
@@ -118,6 +122,7 @@ export default function LibraryView() {
       });
 
       saveLibrary(updatedSessions);
+      onNotify?.(`Arquivo "${file.name}" adicionado à biblioteca.`, 'success');
       setActiveSessionId(null);
       if (e.target) e.target.value = '';
     }
