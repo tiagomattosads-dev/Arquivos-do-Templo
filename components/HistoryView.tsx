@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { History, Book, FileText, ChevronRight, Clock, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ToastProvider';
 
 interface HistoryItem {
   id: string;
@@ -14,6 +15,7 @@ interface HistoryItem {
 
 export default function HistoryView() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const saved = localStorage.getItem('arquivos_templo_recent_books');
@@ -31,10 +33,9 @@ export default function HistoryView() {
   }, []);
 
   const clearHistory = () => {
-    if (confirm('Tem certeza que deseja limpar todo o histórico?')) {
-      setHistory([]);
-      localStorage.removeItem('arquivos_templo_recent_books');
-    }
+    setHistory([]);
+    localStorage.removeItem('arquivos_templo_recent_books');
+    showToast('Histórico de leitura limpo.', 'info');
   };
 
   return (

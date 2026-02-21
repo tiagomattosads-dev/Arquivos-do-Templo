@@ -27,6 +27,7 @@ import {
 import dynamic from 'next/dynamic';
 import { storeBook, getBook } from '@/lib/storage';
 import { extractPdfCover } from '@/lib/pdfUtils';
+import { useToast } from '@/components/ToastProvider';
 
 // Dynamically import readers to avoid SSR issues with browser APIs
 const EpubReader = dynamic(() => import('@/components/EpubReader'), { ssr: false });
@@ -52,6 +53,7 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const { showToast } = useToast();
 
   // Toggle dark mode
   useEffect(() => {
@@ -137,8 +139,9 @@ export default function Home() {
 
       setRecentBooks(updatedRecent);
       localStorage.setItem('arquivos_templo_recent_books', JSON.stringify(updatedRecent));
+      showToast(`"${selectedFile.name}" adicionado com sucesso!`, 'success');
     } else {
-      alert('Por favor, selecione um arquivo EPUB ou PDF válido.');
+      showToast('Por favor, selecione um arquivo EPUB ou PDF válido.', 'error');
     }
   };
 
@@ -150,12 +153,13 @@ export default function Home() {
         const file = new File([stored.data], stored.name, { type: stored.type === 'pdf' ? 'application/pdf' : 'application/epub+zip' });
         setFile(file);
         setFileType(stored.type);
+        showToast(`Abrindo "${stored.name}"...`, 'info');
       } else {
-        alert(`Arquivo "${book.name}" não encontrado no armazenamento local. Por favor, adicione-o novamente.`);
+        showToast(`Arquivo "${book.name}" não encontrado no armazenamento local.`, 'error');
       }
     } catch (error) {
       console.error('Error opening stored book:', error);
-      alert('Erro ao abrir o livro armazenado.');
+      showToast('Erro ao abrir o livro armazenado.', 'error');
     }
   };
 

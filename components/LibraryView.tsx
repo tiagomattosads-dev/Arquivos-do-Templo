@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { storeBook } from '@/lib/storage';
 import { extractPdfCover } from '@/lib/pdfUtils';
+import { useToast } from '@/components/ToastProvider';
 
 interface BookItem {
   id: string;
@@ -37,6 +38,7 @@ export default function LibraryView() {
   const [isAddingSession, setIsAddingSession] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -83,10 +85,13 @@ export default function LibraryView() {
     saveLibrary([...sessions, newSession]);
     setNewSessionName('');
     setIsAddingSession(false);
+    showToast(`Sessão "${newSessionName}" criada.`, 'success');
   };
 
   const deleteSession = (id: string) => {
+    const session = sessions.find(s => s.id === id);
     saveLibrary(sessions.filter(s => s.id !== id));
+    showToast(`Sessão "${session?.name}" excluída.`, 'info');
   };
 
   const handleAddFileClick = (sessionId: string) => {
@@ -99,7 +104,7 @@ export default function LibraryView() {
     if (file && activeSessionId) {
       const extension = file.name.split('.').pop()?.toLowerCase();
       if (extension !== 'epub' && extension !== 'pdf') {
-        alert('Por favor, selecione um arquivo EPUB ou PDF.');
+        showToast('Por favor, selecione um arquivo EPUB ou PDF.', 'error');
         return;
       }
 
@@ -142,6 +147,7 @@ export default function LibraryView() {
       saveLibrary(updatedSessions);
       setActiveSessionId(null);
       if (e.target) e.target.value = '';
+      showToast(`"${file.name}" adicionado à biblioteca.`, 'success');
     }
   };
 
