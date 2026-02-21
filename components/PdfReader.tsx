@@ -21,7 +21,7 @@ const pdfjsVersion = pdfjs.version || '5.4.624';
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 
 interface PdfReaderProps {
-  file: File;
+  file: File | string;
 }
 
 export default function PdfReader({ file }: PdfReaderProps) {
@@ -33,14 +33,21 @@ export default function PdfReader({ file }: PdfReaderProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    const timer = setTimeout(() => {
-      setFileUrl(url);
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      URL.revokeObjectURL(url);
-    };
+    if (typeof file === 'string') {
+      const timer = setTimeout(() => {
+        setFileUrl(file);
+      }, 0);
+      return () => clearTimeout(timer);
+    } else {
+      const url = URL.createObjectURL(file);
+      const timer = setTimeout(() => {
+        setFileUrl(url);
+      }, 0);
+      return () => {
+        clearTimeout(timer);
+        URL.revokeObjectURL(url);
+      };
+    }
   }, [file]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {

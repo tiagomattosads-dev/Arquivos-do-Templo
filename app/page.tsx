@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import dynamic from 'next/dynamic';
+import { supabase } from '@/lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 // Dynamically import readers to avoid SSR issues with browser APIs
 const EpubReader = dynamic(() => import('@/components/EpubReader'), { ssr: false });
@@ -44,14 +46,14 @@ interface RecentBook {
 }
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | string | null>(null);
   const [fileType, setFileType] = useState<'epub' | 'pdf' | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [recentBooks, setRecentBooks] = useState<RecentBook[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const { showToast } = useToast();
 
@@ -66,36 +68,43 @@ export default function Home() {
 
   // Check auth on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('arquivos_templo_user');
-    const timer = setTimeout(() => {
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser));
-        } catch (e) {
-          console.error('Failed to parse user', e);
-        }
-      }
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
       setIsAuthChecking(false);
-    }, 0);
-    return () => clearTimeout(timer);
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Load recent books from localStorage
+  // Load recent books from Supabase
   useEffect(() => {
-    const saved = localStorage.getItem('arquivos_templo_recent_books');
-    if (saved) {
+    if (!user) return;
+
+    const fetchRecentBooks = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        // Use a small delay to satisfy the linter's cascading render check
-        const timer = setTimeout(() => {
-          setRecentBooks(parsed);
-        }, 0);
-        return () => clearTimeout(timer);
-      } catch (e) {
-        console.error('Failed to parse recent books', e);
+        const { data, error } = await supabase
+          .from('books')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (error) throw error;
+        setRecentBooks(data || []);
+      } catch (error) {
+        console.error('Error fetching recent books:', error);
       }
-    }
-  }, []);
+    };
+
+    fetchRecentBooks();
+  }, [user]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -104,7 +113,7 @@ export default function Home() {
     }
   };
 
-  const processFile = (selectedFile: File) => {
+  const processFile = async (selectedFile: File) => {
     const extension = selectedFile.name.split('.').pop()?.toLowerCase();
     let type: 'epub' | 'pdf' | null = null;
 
@@ -114,27 +123,57 @@ export default function Home() {
       type = 'pdf';
     }
 
-    if (type) {
-      setFile(selectedFile);
-      setFileType(type);
-      showToast(`Arquivo "${selectedFile.name}" carregado com sucesso!`, 'success');
-      
-      // Update recent books
-      const newRecent: RecentBook = {
-        name: selectedFile.name,
-        type: type,
-        lastRead: Date.now(),
-        progress: Math.floor(Math.random() * 100), // Mock progress for now
-        cover: `https://picsum.photos/seed/${selectedFile.name}/300/450` // Mock cover
-      };
+    if (type && user) {
+      showToast('Enviando arquivo...', 'info');
+      try {
+        // 1. Upload to Storage
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
 
-      const updatedRecent = [
-        newRecent,
-        ...recentBooks.filter(b => b.name !== selectedFile.name)
-      ].slice(0, 10);
+        const { error: uploadError } = await supabase.storage
+          .from('arquivos_templo')
+          .upload(filePath, selectedFile);
 
-      setRecentBooks(updatedRecent);
-      localStorage.setItem('arquivos_templo_recent_books', JSON.stringify(updatedRecent));
+        if (uploadError) throw uploadError;
+
+        // 2. Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('arquivos_templo')
+          .getPublicUrl(filePath);
+
+        // 3. Save to Database
+        const { error: dbError } = await supabase
+          .from('books')
+          .insert({
+            title: selectedFile.name,
+            file_url: publicUrl,
+            file_type: type,
+            user_id: user.id,
+            cover: `https://picsum.photos/seed/${selectedFile.name}/300/450`
+          });
+
+        if (dbError) throw dbError;
+
+        setFile(selectedFile);
+        setFileType(type);
+        showToast(`Arquivo "${selectedFile.name}" carregado com sucesso!`, 'success');
+        
+        // Refresh recent books
+        const { data } = await supabase
+          .from('books')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4);
+        
+        setRecentBooks(data || []);
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        showToast(error.message || 'Erro ao enviar arquivo.', 'error');
+      }
+    } else if (!user) {
+      showToast('Usuário não autenticado.', 'error');
     } else {
       showToast('Por favor, selecione um arquivo EPUB ou PDF válido.', 'error');
     }
@@ -163,15 +202,20 @@ export default function Home() {
     setFileType(null);
   };
 
-  const handleLogin = (userData: { email: string; name: string }) => {
+  const handleLogin = (userData: any) => {
     setUser(userData);
-    localStorage.setItem('arquivos_templo_user', JSON.stringify(userData));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('arquivos_templo_user');
     showToast('Sessão encerrada.', 'info');
+  };
+
+  const handleOpenBook = (book: any) => {
+    setFile(book.file_url);
+    setFileType(book.file_type);
+    showToast(`Abrindo "${book.title}"...`, 'info');
   };
 
   if (isAuthChecking) {
@@ -318,10 +362,10 @@ export default function Home() {
           <div className="mt-auto p-6 border-t border-zinc-200 dark:border-zinc-800/50">
             <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-zinc-900/50 border border-zinc-800">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold">
-                {user.name.charAt(0).toUpperCase()}
+                {(user.user_metadata?.full_name || user.email)?.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                <p className="text-xs font-bold text-white truncate">{user.user_metadata?.full_name || user.email?.split('@')[0]}</p>
                 <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
               </div>
             </div>
@@ -350,29 +394,27 @@ export default function Home() {
                   <section>
                     {recentBooks.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {recentBooks.map((book, i) => (
+                        {recentBooks.map((book: any, i) => (
                           <motion.div
-                            key={i}
+                            key={book.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
                             className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
-                            onClick={() => {
-                              showToast(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`, 'info');
-                            }}
+                            onClick={() => handleOpenBook(book)}
                           >
                             {/* Book Cover */}
                             <img 
-                              src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
-                              alt={book.name}
+                              src={book.cover || `https://picsum.photos/seed/${book.title}/300/450`}
+                              alt={book.title}
                               className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                               referrerPolicy="no-referrer"
                             />
 
                             {/* Overlay Info (Top) */}
                             <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                              <h4 className="font-bold text-white text-sm truncate" title={book.name}>
-                                {book.name}
+                              <h4 className="font-bold text-white text-sm truncate" title={book.title}>
+                                {book.title}
                               </h4>
                             </div>
 
@@ -381,11 +423,11 @@ export default function Home() {
                               <div className="relative h-8 bg-zinc-950/80 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex items-center justify-center">
                                 <motion.div 
                                   initial={{ width: 0 }}
-                                  animate={{ width: `${book.progress}%` }}
+                                  animate={{ width: `${book.progress || 0}%` }}
                                   className="absolute inset-y-0 left-0 bg-blue-600/80"
                                 />
                                 <span className="relative z-10 text-xs font-bold text-white drop-shadow-md">
-                                  {book.progress}%
+                                  {book.progress || 0}%
                                 </span>
                               </div>
                             </div>
@@ -393,9 +435,9 @@ export default function Home() {
                             {/* Type Badge */}
                             <div className="absolute top-4 left-4">
                               <span className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${
-                                book.type === 'epub' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                                book.file_type === 'epub' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
                               }`}>
-                                {book.type}
+                                {book.file_type}
                               </span>
                             </div>
                           </motion.div>
@@ -419,7 +461,7 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex-1 flex overflow-hidden"
               >
-                <LibraryView />
+                <LibraryView onOpenBook={handleOpenBook} />
               </motion.div>
             ) : activeTab === 'favorites' ? (
               <motion.div 
@@ -429,7 +471,7 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex-1 flex overflow-hidden"
               >
-                <FavoritesView />
+                <FavoritesView onOpenBook={handleOpenBook} />
               </motion.div>
             ) : activeTab === 'history' ? (
               <motion.div 
@@ -439,7 +481,7 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex-1 flex overflow-hidden"
               >
-                <HistoryView />
+                <HistoryView onOpenBook={handleOpenBook} />
               </motion.div>
             ) : (
               <motion.div 

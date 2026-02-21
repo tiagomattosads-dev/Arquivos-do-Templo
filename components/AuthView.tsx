@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Lock, User, ArrowRight, Book, Apple, Chrome } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { supabase } from '@/lib/supabase';
 
 interface AuthViewProps {
-  onLogin: (user: { email: string; name: string }) => void;
+  onLogin: (user: any) => void;
 }
 
 export default function AuthView({ onLogin }: AuthViewProps) {
@@ -19,29 +20,56 @@ export default function AuthView({ onLogin }: AuthViewProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      showToast('Por favor, preencha todos os campos.', 'error');
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
       if (isLogin) {
-        // Mock login logic
-        if (email && password) {
-          showToast('Bem-vindo de volta!', 'success');
-          onLogin({ email, name: email.split('@')[0] });
-        } else {
-          showToast('Por favor, preencha todos os campos.', 'error');
-        }
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+        
+        showToast('Bem-vindo de volta!', 'success');
+        onLogin(data.user);
       } else {
-        // Mock signup logic
-        if (email && password && name) {
+        if (!name) {
+          showToast('Por favor, informe seu nome.', 'error');
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+            },
+          },
+        });
+
+        if (error) throw error;
+        
+        if (data.user && data.session) {
           showToast('Conta criada com sucesso!', 'success');
-          onLogin({ email, name });
+          onLogin(data.user);
         } else {
-          showToast('Por favor, preencha todos os campos.', 'error');
+          showToast('Verifique seu e-mail para confirmar o cadastro.', 'info');
         }
       }
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      showToast(error.message || 'Ocorreu um erro na autenticação.', 'error');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (

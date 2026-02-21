@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 interface EpubReaderProps {
-  file: File;
+  file: File | string;
 }
 
 export default function EpubReader({ file }: EpubReaderProps) {
@@ -31,12 +31,8 @@ export default function EpubReader({ file }: EpubReaderProps) {
   useEffect(() => {
     if (!viewerRef.current || !file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const data = e.target?.result;
-      if (!data) return;
-
-      const book = ePub(data as ArrayBuffer);
+    const initBook = async (data: any) => {
+      const book = ePub(data);
       bookRef.current = book;
 
       const rendition = book.renderTo(viewerRef.current!, {
@@ -78,7 +74,16 @@ export default function EpubReader({ file }: EpubReaderProps) {
       });
     };
 
-    reader.readAsArrayBuffer(file);
+    if (typeof file === 'string') {
+      initBook(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target?.result;
+        if (data) initBook(data as ArrayBuffer);
+      };
+      reader.readAsArrayBuffer(file);
+    }
 
     return () => {
       if (bookRef.current) {

@@ -1,43 +1,60 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { History, Book, FileText, ChevronRight, Clock, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { supabase } from '@/lib/supabase';
 import ConfirmModal from './ConfirmModal';
 
 interface HistoryItem {
   id: string;
-  name: string;
-  type: 'epub' | 'pdf';
-  lastRead: number;
+  title: string;
+  file_type: 'epub' | 'pdf';
+  created_at: string;
   progress: number;
 }
 
-export default function HistoryView() {
+interface HistoryViewProps {
+  onOpenBook: (book: any) => void;
+}
+
+export default function HistoryView({ onOpenBook }: HistoryViewProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const { showToast } = useToast();
 
-  useEffect(() => {
-    const saved = localStorage.getItem('arquivos_templo_recent_books');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const timer = setTimeout(() => {
-          setHistory(parsed);
-        }, 0);
-        return () => clearTimeout(timer);
-      } catch (e) {
-        console.error('Failed to parse history', e);
-      }
-    }
-  }, []);
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  const clearHistory = () => {
-    setHistory([]);
-    localStorage.removeItem('arquivos_templo_recent_books');
-    showToast('Histórico de leitura limpo.', 'info');
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setHistory(data || []);
+    } catch (error: any) {
+      console.error('Error fetching history:', error);
+      showToast('Erro ao carregar histórico.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const clearHistory = async () => {
+    // In a real app, we might have a separate history table
+    // For now, we'll just show a toast as we don't want to delete the books themselves
+    showToast('Funcionalidade de limpar histórico em desenvolvimento.', 'info');
     setIsConfirmOpen(false);
   };
 
@@ -73,34 +90,41 @@ export default function HistoryView() {
           )}
         </div>
 
-        {history.length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-zinc-900 rounded-2xl animate-pulse border border-zinc-800" />
+            ))}
+          </div>
+        ) : history.length > 0 ? (
           <div className="space-y-4">
             {history.map((item, i) => (
               <motion.div
-                key={item.id || i}
+                key={item.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.03 }}
+                onClick={() => onOpenBook(item)}
                 className="group flex items-center gap-6 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-2xl p-4 hover:bg-white dark:hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer shadow-sm hover:shadow-md"
               >
                 <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 shrink-0 shadow-lg">
                   <img 
-                    src={`https://picsum.photos/seed/${item.name}/100/150`}
-                    alt={item.name}
+                    src={`https://picsum.photos/seed/${item.title}/100/150`}
+                    alt={item.title}
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                     referrerPolicy="no-referrer"
                   />
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-zinc-900 dark:text-white truncate">{item.name}</h4>
+                  <h4 className="font-bold text-zinc-900 dark:text-white truncate">{item.title}</h4>
                   <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest font-bold text-zinc-500 mt-1">
                     <span className="flex items-center gap-1">
                       <Clock size={10} />
-                      {new Date(item.lastRead).toLocaleDateString()}
+                      {new Date(item.created_at).toLocaleDateString()}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                    <span>{item.type}</span>
+                    <span>{item.file_type}</span>
                   </div>
                 </div>
 
