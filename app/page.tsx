@@ -25,6 +25,8 @@ import {
   Search
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { storeBook, getBook } from '@/lib/storage';
+import { extractPdfCover } from '@/lib/pdfUtils';
 
 // Dynamically import readers to avoid SSR issues with browser APIs
 const EpubReader = dynamic(() => import('@/components/EpubReader'), { ssr: false });
@@ -34,6 +36,7 @@ const FavoritesView = dynamic(() => import('@/components/FavoritesView'), { ssr:
 const HistoryView = dynamic(() => import('@/components/HistoryView'), { ssr: false });
 
 interface RecentBook {
+  id: string;
   name: string;
   type: 'epub' | 'pdf';
   lastRead: number;
@@ -83,7 +86,7 @@ export default function Home() {
     }
   };
 
-  const processFile = (selectedFile: File) => {
+  const processFile = async (selectedFile: File) => {
     const extension = selectedFile.name.split('.').pop()?.toLowerCase();
     let type: 'epub' | 'pdf' | null = null;
 
@@ -94,16 +97,37 @@ export default function Home() {
     }
 
     if (type) {
+      const bookId = `${selectedFile.name}-${Date.now()}`;
+      
+      // Extract cover if PDF
+      let cover: string | undefined = undefined;
+      if (type === 'pdf') {
+        cover = await extractPdfCover(selectedFile);
+      } else {
+        cover = `https://picsum.photos/seed/${selectedFile.name}/300/450`;
+      }
+
+      // Store in IndexedDB
+      await storeBook({
+        id: bookId,
+        name: selectedFile.name,
+        type: type,
+        data: selectedFile,
+        cover: cover,
+        addedAt: Date.now()
+      });
+
       setFile(selectedFile);
       setFileType(type);
       
       // Update recent books
       const newRecent: RecentBook = {
+        id: bookId,
         name: selectedFile.name,
         type: type,
         lastRead: Date.now(),
-        progress: Math.floor(Math.random() * 100), // Mock progress for now
-        cover: `https://picsum.photos/seed/${selectedFile.name}/300/450` // Mock cover
+        progress: 0,
+        cover: cover
       };
 
       const updatedRecent = [
@@ -115,6 +139,23 @@ export default function Home() {
       localStorage.setItem('arquivos_templo_recent_books', JSON.stringify(updatedRecent));
     } else {
       alert('Por favor, selecione um arquivo EPUB ou PDF válido.');
+    }
+  };
+
+  const openStoredBook = async (book: RecentBook) => {
+    try {
+      const stored = await getBook(book.id);
+      if (stored) {
+        // Convert Blob back to File
+        const file = new File([stored.data], stored.name, { type: stored.type === 'pdf' ? 'application/pdf' : 'application/epub+zip' });
+        setFile(file);
+        setFileType(stored.type);
+      } else {
+        alert(`Arquivo "${book.name}" não encontrado no armazenamento local. Por favor, adicione-o novamente.`);
+      }
+    } catch (error) {
+      console.error('Error opening stored book:', error);
+      alert('Erro ao abrir o livro armazenado.');
     }
   };
 
@@ -295,9 +336,7 @@ export default function Home() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
                             className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
-                            onClick={() => {
-                              alert(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`);
-                            }}
+                            onClick={() => openStoredBook(book)}
                           >
                             {/* Book Cover */}
                             <img 

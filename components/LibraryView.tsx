@@ -14,6 +14,8 @@ import {
   Edit2,
   X
 } from 'lucide-react';
+import { storeBook } from '@/lib/storage';
+import { extractPdfCover } from '@/lib/pdfUtils';
 
 interface BookItem {
   id: string;
@@ -92,7 +94,7 @@ export default function LibraryView() {
     fileInputRef.current?.click();
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeSessionId) {
       const extension = file.name.split('.').pop()?.toLowerCase();
@@ -101,13 +103,33 @@ export default function LibraryView() {
         return;
       }
 
+      const bookId = `${file.name}-${Date.now()}`;
+      
+      // Extract cover if PDF
+      let cover: string | undefined = undefined;
+      if (extension === 'pdf') {
+        cover = await extractPdfCover(file);
+      } else {
+        cover = `https://picsum.photos/seed/${file.name}/300/450`;
+      }
+
+      // Store in IndexedDB
+      await storeBook({
+        id: bookId,
+        name: file.name,
+        type: extension as 'epub' | 'pdf',
+        data: file,
+        cover: cover,
+        addedAt: Date.now()
+      });
+
       const newBook: BookItem = {
-        id: Date.now().toString(),
+        id: bookId,
         name: file.name,
         type: extension as 'epub' | 'pdf',
         addedAt: Date.now(),
         progress: 0,
-        cover: `https://picsum.photos/seed/${file.name}/300/450`
+        cover: cover
       };
 
       const updatedSessions = sessions.map(s => {
