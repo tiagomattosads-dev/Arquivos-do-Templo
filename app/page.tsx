@@ -33,6 +33,7 @@ const PdfReader = dynamic(() => import('@/components/PdfReader'), { ssr: false }
 const LibraryView = dynamic(() => import('@/components/LibraryView'), { ssr: false });
 const FavoritesView = dynamic(() => import('@/components/FavoritesView'), { ssr: false });
 const HistoryView = dynamic(() => import('@/components/HistoryView'), { ssr: false });
+const AuthView = dynamic(() => import('@/components/AuthView'), { ssr: false });
 
 interface RecentBook {
   name: string;
@@ -50,6 +51,8 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const { showToast } = useToast();
 
   // Toggle dark mode
@@ -60,6 +63,22 @@ export default function Home() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Check auth on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('arquivos_templo_user');
+    const timer = setTimeout(() => {
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (e) {
+          console.error('Failed to parse user', e);
+        }
+      }
+      setIsAuthChecking(false);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load recent books from localStorage
   useEffect(() => {
@@ -144,6 +163,29 @@ export default function Home() {
     setFileType(null);
   };
 
+  const handleLogin = (userData: { email: string; name: string }) => {
+    setUser(userData);
+    localStorage.setItem('arquivos_templo_user', JSON.stringify(userData));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('arquivos_templo_user');
+    showToast('Sessão encerrada.', 'info');
+  };
+
+  if (isAuthChecking) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-zinc-950">
+        <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthView onLogin={handleLogin} />;
+  }
+
   return (
     <main className="h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden transition-colors duration-300">
       {/* Header */}
@@ -217,6 +259,14 @@ export default function Home() {
             {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
           </button>
 
+          <button 
+            onClick={handleLogout}
+            className="p-3 rounded-xl hover:bg-zinc-900 text-zinc-400 hover:text-red-400 transition-all border border-transparent hover:border-zinc-800"
+            title="Sair"
+          >
+            <X size={22} />
+          </button>
+
           <button className="p-3 rounded-xl hover:bg-zinc-900 text-zinc-400 hover:text-white transition-all border border-transparent hover:border-zinc-800">
             <Settings size={22} />
           </button>
@@ -266,6 +316,15 @@ export default function Home() {
           </div>
 
           <div className="mt-auto p-6 border-t border-zinc-200 dark:border-zinc-800/50">
+            <div className="flex items-center gap-3 mb-6 p-2 rounded-2xl bg-zinc-900/50 border border-zinc-800">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
+              </div>
+            </div>
             <div className="bg-white dark:bg-zinc-900/30 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800/50">
               <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-400 dark:text-zinc-500 mb-2">Espaço em Nuvem</p>
               <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden mb-2">
