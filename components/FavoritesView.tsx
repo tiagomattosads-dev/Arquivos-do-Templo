@@ -9,6 +9,8 @@ interface FavoriteBook {
   name: string;
   type: 'epub' | 'pdf';
   addedAt: number;
+  progress?: number;
+  cover?: string;
 }
 
 export default function FavoritesView() {
@@ -50,25 +52,44 @@ export default function FavoritesView() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="group relative bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-6 hover:bg-zinc-900 hover:border-red-500/30 transition-all cursor-pointer overflow-hidden"
+                className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-red-500/20 transition-all border border-zinc-800 hover:border-red-500/50"
               >
-                <div className="flex flex-col gap-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl ${
-                    book.type === 'epub' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                {/* Book Cover */}
+                <img 
+                  src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
+                  alt={book.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                  referrerPolicy="no-referrer"
+                />
+
+                {/* Overlay Info (Top) */}
+                <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <h4 className="font-bold text-white text-sm truncate" title={book.name}>
+                    {book.name}
+                  </h4>
+                </div>
+
+                {/* Progress Bar (Bottom) */}
+                <div className="absolute bottom-4 inset-x-4">
+                  <div className="relative h-8 bg-zinc-950/80 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex items-center justify-center">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${book.progress || 0}%` }}
+                      className="absolute inset-y-0 left-0 bg-red-600/80"
+                    />
+                    <span className="relative z-10 text-xs font-bold text-white drop-shadow-md">
+                      {book.progress || 0}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Type Badge */}
+                <div className="absolute top-4 left-4">
+                  <span className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${
+                    book.type === 'epub' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
                   }`}>
-                    {book.type === 'epub' ? <Book size={28} /> : <FileText size={28} />}
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <h4 className="font-bold text-zinc-900 dark:text-white truncate pr-6" title={book.name}>
-                      {book.name}
-                    </h4>
-                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-zinc-500">
-                      <span>{book.type}</span>
-                      <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                      <span>{new Date(book.addedAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
+                    {book.type}
+                  </span>
                 </div>
               </motion.div>
             ))}

@@ -20,6 +20,8 @@ interface BookItem {
   name: string;
   type: 'epub' | 'pdf';
   addedAt: number;
+  progress?: number;
+  cover?: string;
 }
 
 interface Session {
@@ -103,7 +105,9 @@ export default function LibraryView() {
         id: Date.now().toString(),
         name: file.name,
         type: extension as 'epub' | 'pdf',
-        addedAt: Date.now()
+        addedAt: Date.now(),
+        progress: 0,
+        cover: `https://picsum.photos/seed/${file.name}/300/450`
       };
 
       const updatedSessions = sessions.map(s => {
@@ -216,15 +220,44 @@ export default function LibraryView() {
                   {session.books.map((book) => (
                     <div 
                       key={book.id}
-                      className="group bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl p-6 hover:bg-white dark:hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                      className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
                     >
-                      <div className="flex flex-col gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          book.type === 'epub' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
-                        }`}>
-                          {book.type === 'epub' ? <Book size={24} /> : <FileText size={24} />}
+                      {/* Book Cover */}
+                      <img 
+                        src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
+                        alt={book.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                        referrerPolicy="no-referrer"
+                      />
+
+                      {/* Overlay Info (Top) */}
+                      <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <h4 className="font-bold text-white text-sm truncate" title={book.name}>
+                          {book.name}
+                        </h4>
+                      </div>
+
+                      {/* Progress Bar (Bottom) */}
+                      <div className="absolute bottom-4 inset-x-4">
+                        <div className="relative h-8 bg-zinc-950/80 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex items-center justify-center">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${book.progress || 0}%` }}
+                            className="absolute inset-y-0 left-0 bg-blue-600/80"
+                          />
+                          <span className="relative z-10 text-xs font-bold text-white drop-shadow-md">
+                            {book.progress || 0}%
+                          </span>
                         </div>
-                        <h4 className="font-bold text-zinc-900 dark:text-white truncate">{book.name}</h4>
+                      </div>
+
+                      {/* Type Badge */}
+                      <div className="absolute top-4 left-4">
+                        <span className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${
+                          book.type === 'epub' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+                        }`}>
+                          {book.type}
+                        </span>
                       </div>
                     </div>
                   ))}

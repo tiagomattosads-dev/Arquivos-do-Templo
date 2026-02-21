@@ -71,10 +71,13 @@ export default function HistoryView() {
                 transition={{ delay: i * 0.03 }}
                 className="group flex items-center gap-6 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-2xl p-4 hover:bg-white dark:hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer shadow-sm hover:shadow-md"
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  item.type === 'epub' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
-                }`}>
-                  {item.type === 'epub' ? <Book size={24} /> : <FileText size={24} />}
+                <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-800 shrink-0 shadow-lg">
+                  <img 
+                    src={`https://picsum.photos/seed/${item.name}/100/150`}
+                    alt={item.name}
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
                 
                 <div className="flex-1 min-w-0">

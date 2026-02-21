@@ -37,6 +37,8 @@ interface RecentBook {
   name: string;
   type: 'epub' | 'pdf';
   lastRead: number;
+  progress: number;
+  cover?: string;
 }
 
 export default function Home() {
@@ -99,7 +101,9 @@ export default function Home() {
       const newRecent: RecentBook = {
         name: selectedFile.name,
         type: type,
-        lastRead: Date.now()
+        lastRead: Date.now(),
+        progress: Math.floor(Math.random() * 100), // Mock progress for now
+        cover: `https://picsum.photos/seed/${selectedFile.name}/300/450` // Mock cover
       };
 
       const updatedRecent = [
@@ -279,28 +283,9 @@ export default function Home() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="flex-1 overflow-y-auto custom-scrollbar p-12"
               >
-                <div className="max-w-6xl mx-auto space-y-12">
-                  {/* Hero / Welcome */}
-                  <section className="space-y-2">
-                    <h2 className="text-4xl font-display font-bold text-zinc-900 dark:text-white tracking-tight">
-                      Bem-vindo de volta
-                    </h2>
-                    <p className="text-zinc-500 text-lg">
-                      Continue sua jornada literária de onde parou.
-                    </p>
-                  </section>
-
-                  {/* Recent Books */}
-                  <section className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                          <Clock size={18} className="text-blue-500" />
-                        </div>
-                        <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">Lidos Recentemente</h3>
-                      </div>
-                    </div>
-
+                <div className="max-w-6xl mx-auto">
+                  {/* Recent Books Grid Only */}
+                  <section>
                     {recentBooks.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {recentBooks.map((book, i) => (
@@ -309,36 +294,47 @@ export default function Home() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
-                            className="group relative bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl p-6 hover:bg-white dark:hover:bg-zinc-900 hover:border-blue-500/30 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md"
+                            className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
                             onClick={() => {
-                              // Since we can't store the File object, we prompt to select it again
-                              // but in a real app we'd have a backend or IndexedDB
                               alert(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`);
                             }}
                           >
-                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg">
-                                <ChevronRight size={18} />
+                            {/* Book Cover */}
+                            <img 
+                              src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
+                              alt={book.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                              referrerPolicy="no-referrer"
+                            />
+
+                            {/* Overlay Info (Top) */}
+                            <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                              <h4 className="font-bold text-white text-sm truncate" title={book.name}>
+                                {book.name}
+                              </h4>
+                            </div>
+
+                            {/* Progress Bar (Bottom) */}
+                            <div className="absolute bottom-4 inset-x-4">
+                              <div className="relative h-8 bg-zinc-950/80 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden flex items-center justify-center">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${book.progress}%` }}
+                                  className="absolute inset-y-0 left-0 bg-blue-600/80"
+                                />
+                                <span className="relative z-10 text-xs font-bold text-white drop-shadow-md">
+                                  {book.progress}%
+                                </span>
                               </div>
                             </div>
 
-                            <div className="flex flex-col gap-4">
-                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl ${
-                                book.type === 'epub' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                            {/* Type Badge */}
+                            <div className="absolute top-4 left-4">
+                              <span className={`px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest ${
+                                book.type === 'epub' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
                               }`}>
-                                {book.type === 'epub' ? <Book size={28} /> : <FileText size={28} />}
-                              </div>
-                              
-                              <div className="space-y-1">
-                                <h4 className="font-bold text-zinc-900 dark:text-white truncate pr-6" title={book.name}>
-                                  {book.name}
-                                </h4>
-                                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-zinc-500">
-                                  <span>{book.type}</span>
-                                  <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                                  <span>{new Date(book.lastRead).toLocaleDateString()}</span>
-                                </div>
-                              </div>
+                                {book.type}
+                              </span>
                             </div>
                           </motion.div>
                         ))}
@@ -346,32 +342,11 @@ export default function Home() {
                     ) : (
                       <div className="h-64 rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-900 flex flex-col items-center justify-center gap-4 text-zinc-400 dark:text-zinc-600">
                         <Book size={48} className="opacity-20" />
-                        <p className="font-medium">Nenhum livro recente ainda.</p>
+                        <p className="font-medium text-lg">Sua biblioteca está vazia.</p>
+                        <p className="text-sm">Adicione arquivos EPUB ou PDF para começar sua leitura.</p>
                       </div>
                     )}
                   </section>
-
-                  {/* Quick Tips / Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/5 border border-blue-500/20 rounded-3xl p-8 space-y-4 shadow-sm">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg">
-                        <Maximize2 size={24} />
-                      </div>
-                      <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">Foco Total</h3>
-                      <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                        Nossa interface foi desenhada para desaparecer enquanto você lê, garantindo imersão completa no seu livro favorito.
-                      </p>
-                    </div>
-                    <div className="bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800/50 rounded-3xl p-8 space-y-4 shadow-sm">
-                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
-                        <Type size={24} />
-                      </div>
-                      <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">Personalização</h3>
-                      <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                        Ajuste fontes, tamanhos e temas para tornar sua leitura o mais confortável possível para seus olhos.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </motion.div>
             ) : activeTab === 'library' ? (
