@@ -131,16 +131,12 @@ export default function Home() {
         const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('arquivos_templo')
-          .upload(filePath, selectedFile);
+        const { error: uploadError } = await supabase.storage.from('arquivos_templo').upload(filePath, selectedFile);
 
         if (uploadError) throw uploadError;
 
         // 2. Get Public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('arquivos_templo')
-          .getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage.from('arquivos_templo').getPublicUrl(filePath);
 
         // 3. Save to Database
         const { error: dbError } = await supabase

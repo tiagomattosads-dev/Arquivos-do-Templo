@@ -97,16 +97,12 @@ export default function LibraryView({ onOpenBook }: LibraryViewProps) {
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('arquivos_templo')
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('arquivos_templo').upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('arquivos_templo')
-        .getPublicUrl(filePath);
+      const { data: { publicUrl } } = supabase.storage.from('arquivos_templo').getPublicUrl(filePath);
 
       // 3. Save to Database
       const { error: dbError } = await supabase
