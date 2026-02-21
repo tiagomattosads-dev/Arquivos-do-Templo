@@ -17,8 +17,6 @@ export const metadata: Metadata = {
   description: 'Leitor de EPUB e PDF com interface moderna e minimalista.',
 }
 
-import { ToastProvider } from '@/components/ToastProvider'
-
 export default function RootLayout({
   children,
 }: {
@@ -27,9 +25,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} ${spaceGrotesk.variable} dark`}>
       <body className="bg-zinc-950 text-zinc-100 antialiased selection:bg-blue-500/30 selection:text-blue-200" suppressHydrationWarning>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        {children}
       </body>
     </html>
   )

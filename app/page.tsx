@@ -22,10 +22,7 @@ import {
   Library,
   Heart,
   History,
-  Search,
-  CheckCircle2,
-  AlertCircle,
-  Info
+  Search
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -44,12 +41,6 @@ interface RecentBook {
   cover?: string;
 }
 
-interface Toast {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<'epub' | 'pdf' | null>(null);
@@ -58,15 +49,6 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Date.now().toString();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
-  }, []);
 
   // Toggle dark mode
   useEffect(() => {
@@ -131,9 +113,8 @@ export default function Home() {
 
       setRecentBooks(updatedRecent);
       localStorage.setItem('arquivos_templo_recent_books', JSON.stringify(updatedRecent));
-      addToast(`Arquivo "${selectedFile.name}" carregado com sucesso!`, 'success');
     } else {
-      addToast('Por favor, selecione um arquivo EPUB ou PDF válido.', 'error');
+      alert('Por favor, selecione um arquivo EPUB ou PDF válido.');
     }
   };
 
@@ -315,7 +296,7 @@ export default function Home() {
                             transition={{ delay: i * 0.05 }}
                             className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
                             onClick={() => {
-                              addToast(`Para abrir "${book.name}", use o botão "Adicionar Livro" no topo.`, 'info');
+                              alert(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`);
                             }}
                           >
                             {/* Book Cover */}
@@ -376,7 +357,7 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex-1 flex overflow-hidden"
               >
-                <LibraryView onNotify={addToast} />
+                <LibraryView />
               </motion.div>
             ) : activeTab === 'favorites' ? (
               <motion.div 
@@ -396,7 +377,7 @@ export default function Home() {
                 exit={{ opacity: 0, x: -20 }}
                 className="flex-1 flex overflow-hidden"
               >
-                <HistoryView onNotify={addToast} />
+                <HistoryView />
               </motion.div>
             ) : (
               <motion.div 
@@ -466,38 +447,6 @@ export default function Home() {
           Sistema Ativo
         </div>
       </footer>
-
-      {/* Toast Notifications */}
-      <div className="fixed bottom-8 right-8 z-[100] flex flex-col gap-3 pointer-events-none">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 20, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 20, scale: 0.9 }}
-              className={`pointer-events-auto flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl min-w-[300px] ${
-                toast.type === 'success' 
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' 
-                  : toast.type === 'error'
-                  ? 'bg-red-500/10 border-red-500/20 text-red-500'
-                  : 'bg-blue-500/10 border-blue-500/20 text-blue-500'
-              }`}
-            >
-              {toast.type === 'success' && <CheckCircle2 size={20} />}
-              {toast.type === 'error' && <AlertCircle size={20} />}
-              {toast.type === 'info' && <Info size={20} />}
-              <p className="text-sm font-bold flex-1">{toast.message}</p>
-              <button 
-                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
     </main>
   );
 }
