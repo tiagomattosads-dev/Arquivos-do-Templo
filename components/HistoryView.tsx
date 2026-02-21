@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { History, Book, FileText, ChevronRight, Clock, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/useToast';
+import ConfirmModal from './ConfirmModal';
 
 interface HistoryItem {
   id: string;
@@ -14,6 +16,8 @@ interface HistoryItem {
 
 export default function HistoryView() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const saved = localStorage.getItem('arquivos_templo_recent_books');
@@ -31,14 +35,22 @@ export default function HistoryView() {
   }, []);
 
   const clearHistory = () => {
-    if (confirm('Tem certeza que deseja limpar todo o histórico?')) {
-      setHistory([]);
-      localStorage.removeItem('arquivos_templo_recent_books');
-    }
+    setHistory([]);
+    localStorage.removeItem('arquivos_templo_recent_books');
+    showToast('Histórico de leitura limpo.', 'info');
+    setIsConfirmOpen(false);
   };
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar p-12">
+      <ConfirmModal 
+        isOpen={isConfirmOpen}
+        title="Limpar Histórico"
+        message="Tem certeza que deseja limpar todo o seu histórico de leitura? Esta ação não pode ser desfeita."
+        onConfirm={clearHistory}
+        onCancel={() => setIsConfirmOpen(false)}
+        confirmText="Limpar Histórico"
+      />
       <div className="max-w-6xl mx-auto space-y-12">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -52,7 +64,7 @@ export default function HistoryView() {
           </div>
           {history.length > 0 && (
             <button 
-              onClick={clearHistory}
+              onClick={() => setIsConfirmOpen(true)}
               className="flex items-center gap-2 px-4 py-2 text-zinc-500 hover:text-red-400 transition-colors text-sm font-bold"
             >
               <Trash2 size={18} />

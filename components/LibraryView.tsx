@@ -14,6 +14,7 @@ import {
   Edit2,
   X
 } from 'lucide-react';
+import { useToast } from '@/hooks/useToast';
 
 interface BookItem {
   id: string;
@@ -35,6 +36,7 @@ export default function LibraryView() {
   const [isAddingSession, setIsAddingSession] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -97,7 +99,7 @@ export default function LibraryView() {
     if (file && activeSessionId) {
       const extension = file.name.split('.').pop()?.toLowerCase();
       if (extension !== 'epub' && extension !== 'pdf') {
-        alert('Por favor, selecione um arquivo EPUB ou PDF.');
+        showToast('Por favor, selecione um arquivo EPUB ou PDF.', 'error');
         return;
       }
 
@@ -118,6 +120,7 @@ export default function LibraryView() {
       });
 
       saveLibrary(updatedSessions);
+      showToast(`"${file.name}" adicionado à biblioteca.`, 'success');
       setActiveSessionId(null);
       if (e.target) e.target.value = '';
     }
@@ -226,7 +229,7 @@ export default function LibraryView() {
                       <img 
                         src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
                         alt={book.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                         referrerPolicy="no-referrer"
                       />
 

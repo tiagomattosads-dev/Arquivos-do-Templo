@@ -58,7 +58,7 @@ export default function FavoritesView() {
                 <img 
                   src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
                   alt={book.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                   referrerPolicy="no-referrer"
                 />
 

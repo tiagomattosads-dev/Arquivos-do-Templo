@@ -24,6 +24,7 @@ import {
   History,
   Search
 } from 'lucide-react';
+import { useToast } from '@/hooks/useToast';
 import dynamic from 'next/dynamic';
 
 // Dynamically import readers to avoid SSR issues with browser APIs
@@ -49,6 +50,7 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const { showToast } = useToast();
 
   // Toggle dark mode
   useEffect(() => {
@@ -96,6 +98,7 @@ export default function Home() {
     if (type) {
       setFile(selectedFile);
       setFileType(type);
+      showToast(`Arquivo "${selectedFile.name}" carregado com sucesso!`, 'success');
       
       // Update recent books
       const newRecent: RecentBook = {
@@ -114,7 +117,7 @@ export default function Home() {
       setRecentBooks(updatedRecent);
       localStorage.setItem('arquivos_templo_recent_books', JSON.stringify(updatedRecent));
     } else {
-      alert('Por favor, selecione um arquivo EPUB ou PDF válido.');
+      showToast('Por favor, selecione um arquivo EPUB ou PDF válido.', 'error');
     }
   };
 
@@ -296,14 +299,14 @@ export default function Home() {
                             transition={{ delay: i * 0.05 }}
                             className="group relative aspect-[2/3] bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer shadow-xl hover:shadow-blue-500/20 transition-all border border-zinc-800 hover:border-blue-500/50"
                             onClick={() => {
-                              alert(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`);
+                              showToast(`Para abrir "${book.name}", por favor use o botão "Adicionar Livro" no topo.`, 'info');
                             }}
                           >
                             {/* Book Cover */}
                             <img 
                               src={book.cover || `https://picsum.photos/seed/${book.name}/300/450`}
                               alt={book.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100"
+                              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                               referrerPolicy="no-referrer"
                             />
 

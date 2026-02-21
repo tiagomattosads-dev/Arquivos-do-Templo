@@ -1,6 +1,7 @@
 import { Inter, Space_Grotesk } from 'next/font/google'
 import type { Metadata } from 'next'
 import './globals.css'
+import { ToastProvider } from '@/hooks/useToast'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable} ${spaceGrotesk.variable} dark`}>
       <body className="bg-zinc-950 text-zinc-100 antialiased selection:bg-blue-500/30 selection:text-blue-200" suppressHydrationWarning>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )
